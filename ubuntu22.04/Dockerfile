@@ -1,13 +1,18 @@
 FROM ubuntu:22.04
 
 ARG NODE_VERSION=20
-ARG OPENCV_VERSION=4.9.0
 
-# Install Pre-requisites
-RUN apt-get update && apt-get install -y curl wget build-essential g++ cmake unzip
+# Avoid prompts from apt
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Puppeteer Dependencies
-RUN apt-get install -y \
+# Combine update and install to reduce layers
+RUN apt-get update && apt-get install -y \
+    # Prerequisites
+    curl \
+    wget \
+    ca-certificates \
+    gnupg \
+    # Puppeteer dependencies
     fonts-liberation \
     gconf-service \
     libappindicator1 \
@@ -39,38 +44,27 @@ RUN apt-get install -y \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    xdg-utils
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js
-RUN apt-get update  && \
-    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
-# Download OpenCV
-RUN mkdir -p opencv && \
-    cd opencv && \
-    wget -O opencv.zip https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
-    unzip opencv.zip
+# Create app directory
+WORKDIR /app
 
-# Download OpenCV Contrib
-RUN cd opencv && \
-    wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip && \
-    unzip opencv_contrib.zip
+# Create non-root user for running Puppeteer
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+    && mkdir -p /home/pptruser/Downloads \
+    && chown -R pptruser:pptruser /home/pptruser \
+    && chown -R pptruser:pptruser /app
 
-# Configure OpenCV
-RUN cd opencv && \
-    mkdir -p build && \
-    cd build && \
-    cmake -D CMAKE_BUILD_TYPE=RELEASE \
-          -D CMAKE_INSTALL_PREFIX=/usr/local \
-          -D OPENCV_EXTRA_MODULES_PATH=../opencv_contrib-${OPENCV_VERSION}/modules \
-          -D BUILD_EXAMPLES=OFF ../opencv-${OPENCV_VERSION}
+# Switch to non-root user
+USER pptruser
 
-# Compile OpenCV
-RUN cd opencv/build && \ 
-    cmake --build . --config Release
+# Set Puppeteer skip download to false to ensure Chrome is downloaded
+ENV PUPPETEER_SKIP_DOWNLOAD=false
 
-# Install OpenCV
-RUN cd opencv/build && \
-    make install
-    
+CMD ["/bin/bash"]

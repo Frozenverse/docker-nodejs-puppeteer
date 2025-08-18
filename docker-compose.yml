@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  node18:
+    build:
+      context: .
+      dockerfile: ubuntu22.04/Dockerfile
+      args:
+        NODE_VERSION: 18
+    image: nodejs-puppeteer:node18-ubuntu22.04
+    container_name: nodejs-puppeteer-node18
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    command: /bin/bash
+
+  node20:
+    build:
+      context: .
+      dockerfile: ubuntu22.04/Dockerfile
+      args:
+        NODE_VERSION: 20
+    image: nodejs-puppeteer:node20-ubuntu22.04
+    container_name: nodejs-puppeteer-node20
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    command: /bin/bash
+
+  node22:
+    build:
+      context: .
+      dockerfile: ubuntu22.04/Dockerfile
+      args:
+        NODE_VERSION: 22
+    image: nodejs-puppeteer:node22-ubuntu22.04
+    container_name: nodejs-puppeteer-node22
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    command: /bin/bash

@@ -1,0 +1,99 @@
+name: Build Docker Images
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      node_versions:
+        description: 'Node versions to build (comma-separated)'
+        required: false
+        default: '18,20,22'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+        ubuntu-version: ['22.04']
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to docker registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch,suffix=-node${{ matrix.node-version }}
+            type=ref,event=pr,suffix=-node${{ matrix.node-version }}
+            type=semver,pattern={{version}},suffix=-node${{ matrix.node-version }}
+            type=semver,pattern={{major}}.{{minor}},suffix=-node${{ matrix.node-version }}
+            type=raw,value=node${{ matrix.node-version }}-ubuntu${{ matrix.ubuntu-version }}
+            type=raw,value=node${{ matrix.node-version }},enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ubuntu${{ matrix.ubuntu-version }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_VERSION=${{ matrix.node-version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Test Docker image
+        run: |
+          docker build \
+            --build-arg NODE_VERSION=${{ matrix.node-version }} \
+            -t test-image:node${{ matrix.node-version }} \
+            -f ubuntu22.04/Dockerfile \
+            .
+          
+          # Test Node.js installation
+          docker run --rm test-image:node${{ matrix.node-version }} node --version
+          docker run --rm test-image:node${{ matrix.node-version }} npm --version
+          
+          # Test Puppeteer can be installed
+          docker run --rm test-image:node${{ matrix.node-version }} sh -c "npm init -y && npm install puppeteer"

@@ -1,0 +1,14 @@
+{
+  "node_versions": [
+    "18",
+    "20",
+    "22"
+  ],
+  "ubuntu_versions": [
+    "22.04"
+  ],
+  "default_node": "20",
+  "default_ubuntu": "22.04",
+  "registry": "ghcr.io",
+  "image_name": "nodejs-puppeteer"
+}
