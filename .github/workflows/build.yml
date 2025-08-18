@@ -15,7 +15,7 @@ on:
         default: '18,20,22'
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY: docker.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:

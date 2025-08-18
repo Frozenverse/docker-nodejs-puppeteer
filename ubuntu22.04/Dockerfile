@@ -52,19 +52,4 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app directory
-WORKDIR /app
-
-# Create non-root user for running Puppeteer
-RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
-    && mkdir -p /home/pptruser/Downloads \
-    && chown -R pptruser:pptruser /home/pptruser \
-    && chown -R pptruser:pptruser /app
-
-# Switch to non-root user
-USER pptruser
-
-# Set Puppeteer skip download to false to ensure Chrome is downloaded
-ENV PUPPETEER_SKIP_DOWNLOAD=false
-
 CMD ["/bin/bash"]
