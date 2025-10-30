@@ -1,5 +1,5 @@
 # Docker Node.js Puppeteer
-
+trigger
 Docker images with Node.js and Puppeteer (Chromium) dependencies for web automation and testing.
 
 ## Features
